@@ -7,20 +7,20 @@ class Whodat < Formula
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/HueByte/whodat/releases/download/v0.2.0/whodat-aarch64-apple-darwin.tar.gz"
-      sha256 "7e92e0bc467a33a71e314a49f5cf20ad92eef5e69d04df2ae7e5a94c92130781"
+      sha256 "f82dc3ee7060ac0b62b992b7e9b5c3e662de126e4b44178015d857b91b2b8a01"
     else
       url "https://github.com/HueByte/whodat/releases/download/v0.2.0/whodat-x86_64-apple-darwin.tar.gz"
-      sha256 "4b5127babc2f5994ff3efba1f9f3292ec8a488b59bb6624c9db2797ff10dcd5c"
+      sha256 "3f2999df017c01f0d673b9e1b3082bc656f4147d595457dbbaeb246fdd2454ad"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
       url "https://github.com/HueByte/whodat/releases/download/v0.2.0/whodat-aarch64-unknown-linux-musl.tar.gz"
-      sha256 "67c9b69833494d4ce9f3e686663ea486e0eb346a0db1da577474745ba9cb0063"
+      sha256 "b9d5e21e55780725f06a3bbb4a3fd1a305a5affc794d5b1dff19b10ec0908933"
     else
       url "https://github.com/HueByte/whodat/releases/download/v0.2.0/whodat-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "43d7110a046171a978dff6382b9b9abbb89ce748f9a5df69788b310fac958d61"
+      sha256 "f902230413c41f84a92c7de81984bab21d31ae89020d151db8a9ab77e3acdfb7"
     end
   end
 

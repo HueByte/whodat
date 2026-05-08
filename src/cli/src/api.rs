@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-const DEFAULT_API: &str = "https://whodat.dev";
+const DEFAULT_API: &str = "https://whoisdat.dev";
 
 pub struct Client {
     base: String,

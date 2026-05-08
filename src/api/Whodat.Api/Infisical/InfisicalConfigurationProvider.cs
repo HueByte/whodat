@@ -43,11 +43,8 @@ public class InfisicalConfigurationProvider(InfisicalConfigurationSource source)
         var data = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         foreach (var s in secrets)
         {
-            // Explicit Mappings win; otherwise fall back to the env-var
-            // convention where `__` becomes the section separator.
-            var key = opts.Mappings.TryGetValue(s.SecretKey, out var mapped)
-                ? mapped
-                : s.SecretKey.Replace("__", ConfigurationPath.KeyDelimiter);
+            // Mirror ASP.NET Core's env-var convention: `__` -> `:` for nesting.
+            var key = s.SecretKey.Replace("__", ConfigurationPath.KeyDelimiter);
             data[key] = s.SecretValue;
         }
         Data = data;

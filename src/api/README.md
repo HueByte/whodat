@@ -35,17 +35,17 @@ The API integrates with up to two external services. All keys are optional — t
 | Name | ConfigNames | Description | Link |
 |---|---|---|---|
 | GitHub OAuth App | `GitHub:ClientId` | Client ID of an OAuth App with **Enable Device Flow** turned on. Powers `/api/auth/github/*`. The client secret is **not** needed (device flow only). Leave blank to disable; the endpoints return 503. | <https://github.com/settings/developers> |
-| Infisical key vault | `Infisical:Enabled`, `Infisical:SiteUrl`, `Infisical:ProjectId`, `Infisical:EnvironmentSlug`, `Infisical:SecretPath`, `Infisical:ClientId`, `Infisical:ClientSecret`, `Infisical:Mappings` | Optional. When enabled, the [InfisicalConfigurationProvider](Whodat.Api/Infisical/InfisicalConfigurationProvider.cs) pulls remaining secrets at startup over Universal Auth and merges them into `IConfiguration`, overriding `appsettings.json`. | <https://infisical.com> |
+| Infisical key vault | `Infisical:Enabled`, `Infisical:SiteUrl`, `Infisical:ProjectId`, `Infisical:EnvironmentSlug`, `Infisical:SecretPath`, `Infisical:ClientId`, `Infisical:ClientSecret` | Optional. When enabled, the [InfisicalConfigurationProvider](Whodat.Api/Infisical/InfisicalConfigurationProvider.cs) pulls remaining secrets at startup over Universal Auth and merges them into `IConfiguration`, overriding `appsettings.json`. | <https://infisical.com> |
 
 ## Vault secret naming
 
-Vault-side secret names use `snake_case` (cross-project consistency). The `Infisical:Mappings` dictionary translates each one to its idiomatic .NET config key. Current map:
+Vault-side secret keys use the same `__` → `:` convention ASP.NET Core uses for environment variables. Examples:
 
 | Vault key | .NET config key | Used by |
 |---|---|---|
-| `gh_oauth_client_id` | `GitHub:ClientId` | GitHub OAuth endpoints |
+| `GitHub__ClientId` | `GitHub:ClientId` | GitHub OAuth endpoints |
 
-Append a line to `Mappings` in `appsettings.json` whenever you add a vault key that needs to land in a sectioned config path. Unmapped vault keys still pass through with the `__` → `:` convention (so `GitHub__ClientId` would also work).
+Just name the secret in Infisical the way you'd name an env var on the host — no extra mapping required.
 
 ## Configuration order
 

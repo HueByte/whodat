@@ -14,10 +14,7 @@
     "SecretPath": "/",
     "Recursive": true,
     "ClientId": "",
-    "ClientSecret": "",
-    "Mappings": {
-      "gh_oauth_client_id": "GitHub:ClientId"
-    }
+    "ClientSecret": ""
   },
   "Serilog": {
     "MinimumLevel": {

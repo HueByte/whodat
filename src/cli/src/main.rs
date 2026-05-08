@@ -46,6 +46,13 @@ enum Command {
         meta: Vec<(String, String)>,
     },
 
+    /// Log in on this machine using GitHub OAuth (requires an existing handle).
+    Login {
+        /// Use GitHub OAuth (currently the only login method).
+        #[arg(long, default_value_t = true)]
+        github: bool,
+    },
+
     /// Update your existing entry.
     Set {
         #[arg(long)]
@@ -85,6 +92,7 @@ fn main() -> anyhow::Result<()> {
         (Some(Command::Register { handle, github, text, avatar, meta }), _) => {
             commands::register::run(&api, &handle, github, text, avatar, meta)
         }
+        (Some(Command::Login { github }), _) => commands::login::run(&api, github),
         (Some(Command::Set { text, avatar, meta }), _) => {
             commands::set::run(&api, text, avatar, meta)
         }

@@ -5,6 +5,7 @@ using Whodat.Api.Auth;
 using Whodat.Api.Data;
 using Whodat.Api.Endpoints;
 using Whodat.Api.Infisical;
+using Whodat.Api.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,27 @@ builder.Host.UseSerilog((ctx, services, cfg) =>
 var dbPath = builder.Configuration["Whodat:DbPath"] ?? "whodat.db";
 builder.Services.AddDbContext<WhodatDb>(o => o.UseSqlite($"Data Source={dbPath}"));
 builder.Services.AddOpenApi();
+
+// ASP.NET Core Identity (slim — no SignInManager / cookies). UserManager is
+// the only Identity surface we use; password hashing, external logins, and
+// the AspNetUsers schema all come along for the ride.
+builder.Services
+    .AddIdentityCore<WhodatUser>(opts =>
+    {
+        opts.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyz0123456789-";
+        opts.User.RequireUniqueEmail = false;
+        opts.Password.RequireDigit = false;
+        opts.Password.RequireUppercase = false;
+        opts.Password.RequireLowercase = false;
+        opts.Password.RequireNonAlphanumeric = false;
+        opts.Password.RequiredLength = 6;
+    })
+    .AddEntityFrameworkStores<WhodatDb>();
+
+builder.Services
+    .AddAuthentication(BearerTokenHandler.SchemeName)
+    .AddScheme<BearerTokenOptions, BearerTokenHandler>(BearerTokenHandler.SchemeName, _ => { });
+builder.Services.AddAuthorization();
 
 builder.Services.Configure<GithubOptions>(builder.Configuration.GetSection("GitHub"));
 builder.Services.AddHttpClient(GithubAuthEndpoints.HttpClientName, c =>
@@ -40,6 +62,8 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 app.UseSerilogRequestLogging();
+app.UseAuthentication();
+app.UseAuthorization();
 
 using (var scope = app.Services.CreateScope())
 {

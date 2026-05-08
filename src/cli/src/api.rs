@@ -32,6 +32,7 @@ pub struct RegisterRequest<'a> {
 #[derive(Debug, Deserialize)]
 pub struct TokenResponse {
     pub token: String,
+    pub handle: String,
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -64,6 +65,17 @@ impl Client {
         Ok(resp.json()?)
     }
 
+    pub fn me(&self, token: &str) -> Result<Entry> {
+        let url = format!("{}/api/u/me", self.base);
+        let resp = self
+            .http
+            .get(url)
+            .bearer_auth(token)
+            .send()?
+            .error_for_status()?;
+        Ok(resp.json()?)
+    }
+
     pub fn register(&self, req: &RegisterRequest<'_>) -> Result<TokenResponse> {
         let url = format!("{}/api/register", self.base);
         let resp = self.http.post(url).json(req).send()?.error_for_status()?;
@@ -92,7 +104,7 @@ impl Client {
         Ok(())
     }
 
-    pub fn github_start(&self, handle: &str) -> Result<GithubStartResponse> {
+    pub fn github_start(&self, handle: Option<&str>) -> Result<GithubStartResponse> {
         let url = format!("{}/api/auth/github/start", self.base);
         let body = serde_json::json!({ "handle": handle });
         let resp = self.http.post(url).json(&body).send()?.error_for_status()?;
@@ -137,7 +149,7 @@ fn default_interval() -> u32 { 5 }
 #[derive(Debug, Serialize)]
 pub struct GithubCompleteRequest<'a> {
     pub device_code: &'a str,
-    pub handle: &'a str,
+    pub handle: Option<&'a str>,
     pub text: Option<&'a str>,
     pub avatar_ascii: Option<&'a str>,
     pub metadata: Option<&'a BTreeMap<String, String>>,

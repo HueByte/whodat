@@ -1,0 +1,21 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Markup / config languages — 2-space convention.
+[*.{yml,yaml,json,md,xml,csproj,nuspec,slnx}]
+indent_size = 2
+
+# Markdown uses trailing two spaces for hard line breaks.
+[*.md]
+trim_trailing_whitespace = false
+
+# Makefiles require literal tabs.
+[Makefile]
+indent_style = tab

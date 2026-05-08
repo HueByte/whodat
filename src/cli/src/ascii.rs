@@ -19,7 +19,9 @@ pub fn render(source: &str, width: u32) -> Result<String> {
     let target_w = width.max(2);
     let target_h = ((orig_h as f32) * (target_w as f32 / orig_w as f32) / 2.0).round() as u32;
     let target_h = target_h.max(1) * 2; // must be even
-    let resized = img.resize_exact(target_w, target_h, FilterType::Lanczos3).to_rgba8();
+    let resized = img
+        .resize_exact(target_w, target_h, FilterType::Lanczos3)
+        .to_rgba8();
 
     let mut out = String::with_capacity((target_w * target_h) as usize * 20);
     for y in (0..target_h).step_by(2) {

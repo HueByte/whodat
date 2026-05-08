@@ -123,7 +123,9 @@ impl Client {
                     slow_down: bool,
                 }
                 let p: Pending = resp.json().unwrap_or_default();
-                Ok(GithubPoll::Pending { slow_down: p.slow_down })
+                Ok(GithubPoll::Pending {
+                    slow_down: p.slow_down,
+                })
             }
             status => {
                 let body = resp.text().unwrap_or_default();
@@ -138,13 +140,13 @@ pub struct GithubStartResponse {
     pub device_code: String,
     pub user_code: String,
     pub verification_uri: String,
-    #[serde(default)]
-    pub expires_in: u32,
     #[serde(default = "default_interval")]
     pub interval: u32,
 }
 
-fn default_interval() -> u32 { 5 }
+fn default_interval() -> u32 {
+    5
+}
 
 #[derive(Debug, Serialize)]
 pub struct GithubCompleteRequest<'a> {

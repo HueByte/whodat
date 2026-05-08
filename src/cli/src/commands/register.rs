@@ -13,12 +13,28 @@ pub fn run(
 ) -> Result<()> {
     let avatar_ascii = avatar.as_deref().map(ascii::render_default).transpose()?;
     let metadata: BTreeMap<String, String> = meta.into_iter().collect();
-    let metadata_ref = if metadata.is_empty() { None } else { Some(&metadata) };
+    let metadata_ref = if metadata.is_empty() {
+        None
+    } else {
+        Some(&metadata)
+    };
 
     let resp = if github {
-        register_github(api, handle, text.as_deref(), avatar_ascii.as_deref(), metadata_ref)?
+        register_github(
+            api,
+            handle,
+            text.as_deref(),
+            avatar_ascii.as_deref(),
+            metadata_ref,
+        )?
     } else {
-        register_password(api, handle, text.as_deref(), avatar_ascii.as_deref(), metadata_ref)?
+        register_password(
+            api,
+            handle,
+            text.as_deref(),
+            avatar_ascii.as_deref(),
+            metadata_ref,
+        )?
     };
 
     config::save(&config::Session {

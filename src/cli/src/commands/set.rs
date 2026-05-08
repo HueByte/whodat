@@ -17,7 +17,11 @@ pub fn run(
         &api::UpdateRequest {
             text: text.as_deref(),
             avatar_ascii: avatar_ascii.as_deref(),
-            metadata: if metadata.is_empty() { None } else { Some(&metadata) },
+            metadata: if metadata.is_empty() {
+                None
+            } else {
+                Some(&metadata)
+            },
         },
     )?;
 

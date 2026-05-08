@@ -7,7 +7,11 @@ mod render;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "whodat", version, about = "a global, public registry of identities")]
+#[command(
+    name = "whodat",
+    version,
+    about = "a global, public registry of identities"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
@@ -89,9 +93,16 @@ fn main() -> anyhow::Result<()> {
         (Some(Command::Lookup { handle }), _) | (None, Some(handle)) => {
             commands::lookup::run(&api, &handle)
         }
-        (Some(Command::Register { handle, github, text, avatar, meta }), _) => {
-            commands::register::run(&api, &handle, github, text, avatar, meta)
-        }
+        (
+            Some(Command::Register {
+                handle,
+                github,
+                text,
+                avatar,
+                meta,
+            }),
+            _,
+        ) => commands::register::run(&api, &handle, github, text, avatar, meta),
         (Some(Command::Login { github }), _) => commands::login::run(&api, github),
         (Some(Command::Set { text, avatar, meta }), _) => {
             commands::set::run(&api, text, avatar, meta)

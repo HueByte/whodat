@@ -1,0 +1,99 @@
+name: Choco publish (manual)
+
+# Manual rescue path for the Chocolatey publish step. Use this when the auto
+# `choco` job in release.yml fails partway through and the GH release already
+# exists, which makes release.yml's `should_release` gate refuse to fire choco
+# again. This workflow is skip-aware (`choco search`) so re-running on an
+# already-published version is a safe no-op.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish (e.g. v0.2.0). Must already exist as a GitHub Release.'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  choco:
+    name: Publish to Chocolatey
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve tag and version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ inputs.tag }}".Trim()
+          if (-not $tag.StartsWith('v')) { $tag = "v$tag" }
+          $version = $tag.Substring(1)
+          if ($version -notmatch '^\d+\.\d+\.\d+(?:[-+].+)?$') {
+            Write-Error "Tag '$tag' doesn't look like a semver (vX.Y.Z[-pre]+meta])."
+            exit 1
+          }
+          "tag=$tag"     >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "tag=$tag version=$version"
+
+      - name: Verify GitHub release exists for that tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          gh release view "${{ steps.version.outputs.tag }}" > $null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "No GitHub release found for ${{ steps.version.outputs.tag }}. Tag the release first via release.yml."
+            exit 1
+          }
+
+      - name: Check if version already on Chocolatey
+        id: choco_check
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $result = choco search whodat --version $version --exact --source https://community.chocolatey.org/api/v2/ 2>&1
+          if ($result -match "whodat $version") {
+            "exists=true" >> $env:GITHUB_OUTPUT
+            Write-Host "whodat $version is already published — nothing to do."
+          } else {
+            "exists=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Download Windows release archive
+        if: steps.choco_check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release download "${{ steps.version.outputs.tag }}" --pattern "whodat-x86_64-pc-windows-msvc.zip"
+
+      - name: Pull CI secrets from Infisical
+        if: steps.choco_check.outputs.exists == 'false'
+        uses: infisical/secrets-action@v1.0.7
+        with:
+          method: universal
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          domain: https://secrets.voidcube.cloud
+          project-slug: whodat
+          env-slug: prod
+          secret-path: /ci
+          export-type: env
+
+      - name: Pack and push
+        if: steps.choco_check.outputs.exists == 'false'
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $checksum = (Get-FileHash whodat-x86_64-pc-windows-msvc.zip -Algorithm SHA256).Hash.ToLower()
+
+          (Get-Content packaging/choco/whodat.nuspec) -replace '__VERSION__', $version | Set-Content packaging/choco/whodat.nuspec
+          (Get-Content packaging/choco/tools/chocolateyInstall.ps1) -replace '__VERSION__', $version | Set-Content packaging/choco/tools/chocolateyInstall.ps1
+          (Get-Content packaging/choco/tools/chocolateyInstall.ps1) -replace '__CHECKSUM64__', $checksum | Set-Content packaging/choco/tools/chocolateyInstall.ps1
+
+          Set-Location packaging/choco
+          choco pack whodat.nuspec --output-directory $env:TEMP
+          $pkg = Get-ChildItem "$env:TEMP\whodat.*.nupkg" | Select-Object -First 1
+          choco push $pkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY

@@ -5,4 +5,5 @@ pub mod lookup;
 pub mod me;
 pub mod register;
 pub mod set;
+pub mod update;
 pub mod visibility;

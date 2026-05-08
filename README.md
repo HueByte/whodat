@@ -102,6 +102,27 @@ brew install --formula https://raw.githubusercontent.com/HueByte/whodat/master/p
 cargo install --path src/cli
 ```
 
+### Updating
+
+Package-manager users:
+
+```powershell
+choco upgrade whodat       # Windows
+```
+
+```bash
+brew upgrade --formula https://raw.githubusercontent.com/HueByte/whodat/master/packaging/homebrew/whodat.rb   # macOS / Linux
+```
+
+Manual install? The CLI updates itself:
+
+```bash
+whodat update --check      # see if a newer release exists
+whodat update              # download + replace in place
+```
+
+`whodat update` pulls the latest GitHub Release, picks the asset matching your platform, verifies the SHA256, and atomically replaces the running binary. Works on all targets (linux/macOS/windows × x64/arm64). Re-run `whodat --version` to confirm the new build.
+
 ## CLI usage
 
 ```text

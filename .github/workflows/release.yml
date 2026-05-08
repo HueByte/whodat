@@ -207,8 +207,8 @@ jobs:
           client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
           domain: https://secrets.voidcube.cloud
           project-slug: whodat
-          env-slug: prod
-          secret-path: /ci
+          env-slug: ci
+          secret-path: /
           export-type: env
 
       - name: Pack and push

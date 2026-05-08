@@ -1,0 +1,17 @@
+VERIFICATION
+
+To verify the package contents:
+
+1. Download the official release archive from:
+   https://github.com/HueByte/whodat/releases
+
+2. The relevant file is: whodat-x86_64-pc-windows-msvc.zip
+
+3. Calculate the SHA256 checksum:
+   - PowerShell: Get-FileHash whodat-x86_64-pc-windows-msvc.zip -Algorithm SHA256
+   - Linux/macOS: sha256sum whodat-x86_64-pc-windows-msvc.zip
+
+4. Compare with the `checksum64` value in chocolateyInstall.ps1.
+
+LICENSE: MIT — see LICENSE.txt in this directory or
+https://github.com/HueByte/whodat/blob/master/LICENSE

@@ -427,3 +427,17 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Huestoms
+**/.dev/**
+
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock
+
+# Whodat runtime
+*.db
+*.db-shm
+*.db-wal
+.env

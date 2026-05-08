@@ -1,0 +1,288 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  detect:
+    name: Detect release
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.changes.outputs.changed == 'true' && steps.check_release.outputs.exists == 'false' }}
+      release_exists: ${{ steps.check_release.outputs.exists }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect src changes
+        id: changes
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            CHANGED=$(git diff --name-only "$BEFORE" HEAD -- 'src/' | wc -l)
+            [ "$CHANGED" -gt 0 ] && echo "changed=true" >> "$GITHUB_OUTPUT" || echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read version from Cargo.toml
+        id: version
+        run: |
+          VERSION=$(grep -oP '(?<=^version = ")[^"]+' src/cli/Cargo.toml)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check if release exists
+        id: check_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  prepare:
+    name: Create draft release
+    needs: detect
+    if: needs.detect.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create empty draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.detect.outputs.tag }}
+        run: |
+          gh release create "$TAG" \
+            --draft \
+            --title "whodat $TAG" \
+            --notes "Build in progress…"
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: [detect, prepare]
+    if: needs.detect.outputs.should_release == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.gz
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.gz
+          - target: x86_64-apple-darwin
+            os: macos-13
+            archive: tar.gz
+          - target: aarch64-apple-darwin
+            os: macos-14
+            archive: tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and upload archive
+        uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          bin: whodat
+          target: ${{ matrix.target }}
+          archive: whodat-${{ matrix.target }}
+          ref: refs/tags/${{ needs.detect.outputs.tag }}
+          tar: ${{ matrix.archive == 'tar.gz' && 'all' || 'none' }}
+          zip: ${{ matrix.archive == 'zip' && 'all' || 'none' }}
+          manifest_path: src/cli/Cargo.toml
+          checksum: sha256
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    name: Publish release
+    needs: [detect, build]
+    if: needs.detect.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build release notes
+        env:
+          TAG: ${{ needs.detect.outputs.tag }}
+          REPO: https://github.com/${{ github.repository }}
+        run: |
+          PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${TAG}$" | head -n 1 || true)
+          {
+            echo "## whodat $TAG"
+            echo ""
+            echo "### Install"
+            echo ""
+            echo "**Windows (Chocolatey):**"
+            echo ""
+            echo '```powershell'
+            echo "choco install whodat"
+            echo '```'
+            echo ""
+            echo "**macOS / Linux (Homebrew formula by URL):**"
+            echo ""
+            echo '```bash'
+            echo "brew install --formula https://raw.githubusercontent.com/${{ github.repository }}/master/packaging/homebrew/whodat.rb"
+            echo '```'
+            echo ""
+            echo "**Manual:** download an archive below, extract \`whodat\` (or \`whodat.exe\`), drop on your \`\$PATH\`."
+            echo ""
+            echo "---"
+            echo ""
+            echo "### Commits"
+            echo ""
+            if [ -n "$PREV_TAG" ]; then
+              git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)" --no-merges
+            else
+              git log HEAD --pretty=format:"- %s (%h)" --no-merges
+            fi
+            echo ""
+            echo ""
+            if [ -n "$PREV_TAG" ]; then
+              echo "*Diff: [${PREV_TAG}...${TAG}](${REPO}/compare/${PREV_TAG}...${TAG})*"
+            fi
+          } > release-notes.md
+
+      - name: Finalize release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.detect.outputs.tag }}
+        run: |
+          gh release edit "$TAG" \
+            --title "whodat $TAG" \
+            --notes-file release-notes.md \
+            --draft=false
+
+  choco:
+    name: Publish to Chocolatey
+    needs: [detect, publish]
+    if: needs.detect.outputs.should_release == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if version already on Chocolatey
+        id: choco_check
+        shell: pwsh
+        run: |
+          $version = "${{ needs.detect.outputs.version }}"
+          $result = choco search whodat --version $version --exact --source https://community.chocolatey.org/api/v2/ 2>&1
+          if ($result -match "whodat $version") {
+            echo "exists=true" >> $env:GITHUB_OUTPUT
+            Write-Host "Chocolatey package whodat $version already published — skipping."
+          } else {
+            echo "exists=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Download Windows release archive
+        if: steps.choco_check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release download "${{ needs.detect.outputs.tag }}" --pattern "whodat-x86_64-pc-windows-msvc.zip"
+
+      - name: Pack and push
+        if: steps.choco_check.outputs.exists == 'false'
+        shell: pwsh
+        env:
+          CHOCO_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+        run: |
+          $version = "${{ needs.detect.outputs.version }}"
+          $checksum = (Get-FileHash whodat-x86_64-pc-windows-msvc.zip -Algorithm SHA256).Hash.ToLower()
+
+          (Get-Content packaging/choco/whodat.nuspec) -replace '__VERSION__', $version | Set-Content packaging/choco/whodat.nuspec
+          (Get-Content packaging/choco/tools/chocolateyInstall.ps1) -replace '__VERSION__', $version | Set-Content packaging/choco/tools/chocolateyInstall.ps1
+          (Get-Content packaging/choco/tools/chocolateyInstall.ps1) -replace '__CHECKSUM64__', $checksum | Set-Content packaging/choco/tools/chocolateyInstall.ps1
+
+          Set-Location packaging/choco
+          choco pack whodat.nuspec --output-directory $env:TEMP
+          $pkg = Get-ChildItem "$env:TEMP\whodat.*.nupkg" | Select-Object -First 1
+          choco push $pkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
+
+  homebrew:
+    name: Update Homebrew formula in repo
+    needs: [detect, publish]
+    if: needs.detect.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute archive checksums
+        id: sums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.detect.outputs.tag }}
+        run: |
+          mkdir -p _dl
+          cd _dl
+          gh release download "$TAG" \
+            --pattern "whodat-x86_64-apple-darwin.tar.gz" \
+            --pattern "whodat-aarch64-apple-darwin.tar.gz" \
+            --pattern "whodat-x86_64-unknown-linux-musl.tar.gz" \
+            --pattern "whodat-aarch64-unknown-linux-musl.tar.gz"
+          SHA_DARWIN_X64=$(sha256sum whodat-x86_64-apple-darwin.tar.gz | awk '{print $1}')
+          SHA_DARWIN_ARM=$(sha256sum whodat-aarch64-apple-darwin.tar.gz | awk '{print $1}')
+          SHA_LINUX_X64=$(sha256sum whodat-x86_64-unknown-linux-musl.tar.gz | awk '{print $1}')
+          SHA_LINUX_ARM=$(sha256sum whodat-aarch64-unknown-linux-musl.tar.gz | awk '{print $1}')
+          {
+            echo "darwin_x64=$SHA_DARWIN_X64"
+            echo "darwin_arm=$SHA_DARWIN_ARM"
+            echo "linux_x64=$SHA_LINUX_X64"
+            echo "linux_arm=$SHA_LINUX_ARM"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Render formula from template
+        env:
+          VERSION: ${{ needs.detect.outputs.version }}
+          TAG: ${{ needs.detect.outputs.tag }}
+          REPO: ${{ github.repository }}
+          SHA_DARWIN_X64: ${{ steps.sums.outputs.darwin_x64 }}
+          SHA_DARWIN_ARM: ${{ steps.sums.outputs.darwin_arm }}
+          SHA_LINUX_X64: ${{ steps.sums.outputs.linux_x64 }}
+          SHA_LINUX_ARM: ${{ steps.sums.outputs.linux_arm }}
+        run: |
+          sed \
+            -e "s|__VERSION__|${VERSION}|g" \
+            -e "s|__TAG__|${TAG}|g" \
+            -e "s|__REPO__|${REPO}|g" \
+            -e "s|__SHA_DARWIN_X64__|${SHA_DARWIN_X64}|g" \
+            -e "s|__SHA_DARWIN_ARM__|${SHA_DARWIN_ARM}|g" \
+            -e "s|__SHA_LINUX_X64__|${SHA_LINUX_X64}|g" \
+            -e "s|__SHA_LINUX_ARM__|${SHA_LINUX_ARM}|g" \
+            packaging/homebrew/whodat.rb.template > packaging/homebrew/whodat.rb
+
+      - name: Commit updated formula
+        env:
+          TAG: ${{ needs.detect.outputs.tag }}
+        run: |
+          if git diff --quiet packaging/homebrew/whodat.rb; then
+            echo "Formula unchanged — skipping commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packaging/homebrew/whodat.rb
+          git commit -m "chore(homebrew): bump formula to $TAG"
+          git push

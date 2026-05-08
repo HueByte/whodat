@@ -1,0 +1,81 @@
+name: Bug report
+description: Report a reproducible bug
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+        If this is a security issue (auth bypass, token leak, abuse vector), please use a private GitHub Security Advisory instead of a public issue.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - CLI (whodat client)
+        - API (Whodat.Api)
+        - Docker / compose
+        - nginx config
+        - Packaging (Chocolatey / Homebrew)
+        - Docs / README
+        - CI
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected to happen.
+      placeholder: "When I..., I expected..., but ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Include minimal, numbered steps.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stack traces
+      description: Paste relevant logs (redact tokens/secrets).
+      render: text
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: CLI version (`whodat --version`), commit SHA, or release tag.
+      placeholder: v0.1.0
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, terminal, and (if API-side) Docker version.
+      placeholder: |
+        OS: Windows 11 / macOS 14.4 / Ubuntu 22.04
+        Terminal: Windows Terminal / iTerm2 / Alacritty
+        Docker: 24.0.x (only if API-side)
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: I removed sensitive info (tokens/keys) from logs
+          required: true

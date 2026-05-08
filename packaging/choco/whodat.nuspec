@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>whodat</id>
+    <version>__VERSION__</version>
+    <title>whodat</title>
+    <authors>HueByte</authors>
+    <owners>HueByte</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>https://github.com/HueByte/whodat/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/HueByte/whodat</projectUrl>
+    <projectSourceUrl>https://github.com/HueByte/whodat</projectSourceUrl>
+    <bugTrackerUrl>https://github.com/HueByte/whodat/issues</bugTrackerUrl>
+    <packageSourceUrl>https://github.com/HueByte/whodat/tree/master/packaging/choco</packageSourceUrl>
+    <description>finger for the modern internet — a global, public identity registry queryable from your terminal. Claim a handle, drop a blurb plus an optional ASCII-rendered avatar, and let anyone `whodat` you back. Single static binary, two auth options (password or GitHub OAuth device flow), no feeds.</description>
+    <summary>Public identity registry for the terminal — claim a handle, set a blurb, get looked up.</summary>
+    <tags>cli terminal finger registry identity rust</tags>
+    <releaseNotes>https://github.com/HueByte/whodat/releases/tag/v__VERSION__</releaseNotes>
+    <copyright>Copyright (c) 2026 HueByte</copyright>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

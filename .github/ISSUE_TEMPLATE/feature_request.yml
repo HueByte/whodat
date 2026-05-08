@@ -1,0 +1,53 @@
+name: Feature request
+description: Suggest an idea or improvement
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement.
+
+        whodat tries to stay stupidly simple — terminal-first, one binary, no feeds. Improvements that keep the surface small and the install painless win out over feature breadth.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI UX / commands
+        - ASCII rendering
+        - API endpoints
+        - Auth (password / GitHub OAuth)
+        - Anti-abuse / rate limiting
+        - Hosting / Docker / nginx
+        - Packaging (Chocolatey / Homebrew)
+        - Docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      placeholder: "Right now I can't..., which means ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      placeholder: "Add/change ..., so that ..."
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you've thought about.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Mockups, examples, links, etc.

@@ -1,0 +1,43 @@
+name: Release Checklist
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  release-checklist:
+    name: Release Checklist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read branch version
+        id: version
+        run: |
+          VERSION=$(grep -oP '(?<=^version = ")[^"]+' src/cli/Cargo.toml)
+          if [ -z "$VERSION" ]; then
+            echo "::error file=src/cli/Cargo.toml::Could not read version from Cargo.toml"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Branch version: $VERSION"
+
+      - name: Check version was bumped from master
+        env:
+          BRANCH_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git fetch origin master --depth=1
+          MASTER_VERSION=$(git show origin/master:src/cli/Cargo.toml | grep -oP '(?<=^version = ")[^"]+')
+          echo "Branch: $BRANCH_VERSION | master: $MASTER_VERSION"
+          if [ "$BRANCH_VERSION" = "$MASTER_VERSION" ]; then
+            echo "::error file=src/cli/Cargo.toml::Version $BRANCH_VERSION was not bumped from master. Update version in src/cli/Cargo.toml before merging."
+            exit 1
+          fi
+
+      - name: Check Dockerfile / compose still build
+        run: |
+          # Sanity: nothing in this PR should leave the compose stack non-buildable.
+          docker compose -f docker-compose.yml config >/dev/null

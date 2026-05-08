@@ -2,21 +2,23 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Whodat.Api.Auth;
-using Whodat.Api.Data;
 using Whodat.Api.Models;
 
 namespace Whodat.Api.Endpoints;
 
 /// GitHub OAuth via the device-code flow. The CLI calls /start to get a
 /// `user_code` for the user to type at github.com/login/device, then polls
-/// /complete until GitHub authorizes. On success, the registration is
-/// persisted with auth_kind = github and the bearer token is returned.
+/// /complete until GitHub authorizes. /complete is register-OR-login: if the
+/// GitHub identity is already linked to a WhodatUser the existing session is
+/// rotated; otherwise a new WhodatUser is created with the supplied handle.
 public static class GithubAuthEndpoints
 {
     public const string HttpClientName = "github";
+    public const string LoginProvider = "github";
+    public const string LoginProviderDisplayName = "GitHub";
 
     private const int MaxText = 280;
     private const int MaxAscii = 64 * 1024;
@@ -31,15 +33,21 @@ public static class GithubAuthEndpoints
         StartRequest req,
         IHttpClientFactory httpFactory,
         IOptions<GithubOptions> options,
-        WhodatDb db)
+        UserManager<WhodatUser> userManager)
     {
         if (!options.Value.IsConfigured)
             return Disabled();
 
-        var handle = Handles.Normalize(req.Handle ?? "");
-        if (handle is null) return Results.BadRequest(new { error = "invalid handle" });
-        if (await db.Users.AnyAsync(u => u.Handle == handle))
-            return Results.Conflict(new { error = "handle taken" });
+        // Handle is optional: omit it for login. If supplied, validate it's
+        // available now so the user doesn't bounce off github.com just to
+        // discover the handle was taken.
+        if (!string.IsNullOrEmpty(req.Handle))
+        {
+            var handle = Handles.Normalize(req.Handle);
+            if (handle is null) return Results.BadRequest(new { error = "invalid handle" });
+            if (await userManager.FindByNameAsync(handle) is not null)
+                return Results.Conflict(new { error = "handle taken" });
+        }
 
         using var http = httpFactory.CreateClient(HttpClientName);
         var form = new FormUrlEncodedContent(new[]
@@ -67,16 +75,17 @@ public static class GithubAuthEndpoints
         CompleteRequest req,
         IHttpClientFactory httpFactory,
         IOptions<GithubOptions> options,
-        WhodatDb db)
+        UserManager<WhodatUser> userManager)
     {
         if (!options.Value.IsConfigured)
             return Disabled();
 
-        var handle = Handles.Normalize(req.Handle ?? "");
-        if (handle is null) return Results.BadRequest(new { error = "invalid handle" });
-        if (string.IsNullOrEmpty(req.DeviceCode)) return Results.BadRequest(new { error = "device_code required" });
-        if ((req.Text?.Length ?? 0) > MaxText) return Results.BadRequest(new { error = "text too long" });
-        if ((req.AvatarAscii?.Length ?? 0) > MaxAscii) return Results.BadRequest(new { error = "avatar too large" });
+        if (string.IsNullOrEmpty(req.DeviceCode))
+            return Results.BadRequest(new { error = "device_code required" });
+        if ((req.Text?.Length ?? 0) > MaxText)
+            return Results.BadRequest(new { error = "text too long" });
+        if ((req.AvatarAscii?.Length ?? 0) > MaxAscii)
+            return Results.BadRequest(new { error = "avatar too large" });
 
         using var http = httpFactory.CreateClient(HttpClientName);
         var form = new FormUrlEncodedContent(new[]
@@ -90,88 +99,114 @@ public static class GithubAuthEndpoints
         if (tokenBody is null)
             return Results.Json(new { error = "invalid github response" }, statusCode: 502);
 
-        // Device flow returns 200 either way; the polling state is in the JSON body.
         if (!string.IsNullOrEmpty(tokenBody.Error))
         {
             return tokenBody.Error switch
             {
                 "authorization_pending" => Results.Json(new { status = "pending" }, statusCode: 202),
-                "slow_down"             => Results.Json(new { status = "pending", slow_down = true }, statusCode: 202),
-                "expired_token"         => Results.Json(new { error = "expired" }, statusCode: 401),
-                "access_denied"         => Results.Json(new { error = "denied" }, statusCode: 401),
-                _                        => Results.Json(new { error = tokenBody.Error }, statusCode: 400),
+                "slow_down" => Results.Json(new { status = "pending", slow_down = true }, statusCode: 202),
+                "expired_token" => Results.Json(new { error = "expired" }, statusCode: 401),
+                "access_denied" => Results.Json(new { error = "denied" }, statusCode: 401),
+                _ => Results.Json(new { error = tokenBody.Error }, statusCode: 400),
             };
         }
 
         if (string.IsNullOrEmpty(tokenBody.AccessToken))
             return Results.Json(new { error = "no access token" }, statusCode: 502);
 
-        // Resolve the GitHub user behind the token.
+        // Resolve the GitHub identity behind the access token.
         var userReq = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user");
         userReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenBody.AccessToken);
         var userResp = await http.SendAsync(userReq);
         if (!userResp.IsSuccessStatusCode)
             return Results.Json(new { error = "github user lookup failed" }, statusCode: 502);
-        var user = await userResp.Content.ReadFromJsonAsync<GithubUser>();
-        if (user is null || user.Id == 0)
+        var ghUser = await userResp.Content.ReadFromJsonAsync<GithubUser>();
+        if (ghUser is null || ghUser.Id == 0)
             return Results.Json(new { error = "invalid github user" }, statusCode: 502);
 
-        // One github account, one handle.
-        if (await db.Users.AnyAsync(u => u.GithubId == user.Id))
-            return Results.Conflict(new { error = "github account already registered" });
-        if (await db.Users.AnyAsync(u => u.Handle == handle))
-            return Results.Conflict(new { error = "handle taken" });
-
-        var bearer = Tokens.Generate();
+        var providerKey = ghUser.Id.ToString();
+        var newToken = Tokens.Generate();
+        var newHash = Tokens.Hash(newToken);
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-        db.Users.Add(new UserEntry
+        // Login path: GitHub identity already linked → rotate token, return.
+        var existing = await userManager.FindByLoginAsync(LoginProvider, providerKey);
+        if (existing is not null)
         {
-            Handle = handle,
+            existing.TokenHash = newHash;
+            existing.UpdatedAt = now;
+            var update = await userManager.UpdateAsync(existing);
+            if (!update.Succeeded)
+                return Results.Problem("token rotation failed", statusCode: 500);
+            return Results.Ok(new TokenResponse(newToken, existing.UserName!));
+        }
+
+        // Register path: requires a handle.
+        var handle = Handles.Normalize(req.Handle ?? "");
+        if (handle is null)
+            return Results.BadRequest(new { error = "handle required for new registration" });
+
+        var newUser = new WhodatUser
+        {
+            UserName = handle,
             Text = req.Text,
             AvatarAscii = req.AvatarAscii,
             MetadataJson = req.Metadata is null ? null : JsonSerializer.Serialize(req.Metadata),
-            AuthKind = AuthKind.Github,
-            GithubId = user.Id,
-            TokenHash = Tokens.Hash(bearer),
+            TokenHash = newHash,
             RegisteredAt = now,
             UpdatedAt = now,
-        });
-        await db.SaveChangesAsync();
+        };
 
-        return Results.Ok(new TokenResponse(bearer));
+        var create = await userManager.CreateAsync(newUser);
+        if (!create.Succeeded)
+        {
+            var duplicate = create.Errors.Any(e => e.Code == "DuplicateUserName");
+            if (duplicate) return Results.Conflict(new { error = "handle taken" });
+            return Results.BadRequest(new { error = string.Join(", ", create.Errors.Select(e => e.Description)) });
+        }
+
+        var login = await userManager.AddLoginAsync(newUser,
+            new UserLoginInfo(LoginProvider, providerKey, LoginProviderDisplayName));
+        if (!login.Succeeded)
+        {
+            // Roll back the user so the next attempt isn't blocked on a half-created row.
+            await userManager.DeleteAsync(newUser);
+            return Results.Problem("github login link failed", statusCode: 500);
+        }
+
+        return Results.Ok(new TokenResponse(newToken, newUser.UserName!));
     }
 
     private static IResult Disabled() =>
         Results.Json(new { error = "github auth not configured" }, statusCode: 503);
 
-    public record StartRequest(string Handle);
+    public record StartRequest(string? Handle);
 
     public record StartResponse(
-        [property: JsonPropertyName("device_code")]      string DeviceCode,
-        [property: JsonPropertyName("user_code")]        string UserCode,
+        [property: JsonPropertyName("device_code")] string DeviceCode,
+        [property: JsonPropertyName("user_code")] string UserCode,
         [property: JsonPropertyName("verification_uri")] string VerificationUri,
-        [property: JsonPropertyName("expires_in")]       int ExpiresIn,
+        [property: JsonPropertyName("expires_in")] int ExpiresIn,
         int Interval);
 
     public record CompleteRequest(
-        [property: JsonPropertyName("device_code")]    string DeviceCode,
-        string Handle,
+        [property: JsonPropertyName("device_code")] string DeviceCode,
+        string? Handle,
         string? Text,
         [property: JsonPropertyName("avatar_ascii")] string? AvatarAscii,
         Dictionary<string, string>? Metadata);
 
     private record GithubDeviceResponse(
-        [property: JsonPropertyName("device_code")]      string? DeviceCode,
-        [property: JsonPropertyName("user_code")]        string? UserCode,
+        [property: JsonPropertyName("device_code")] string? DeviceCode,
+        [property: JsonPropertyName("user_code")] string? UserCode,
         [property: JsonPropertyName("verification_uri")] string? VerificationUri,
-        [property: JsonPropertyName("expires_in")]       int ExpiresIn,
+        [property: JsonPropertyName("expires_in")] int ExpiresIn,
         int Interval,
         string? Error);
 
     private record GithubTokenResponse(
         [property: JsonPropertyName("access_token")] string? AccessToken,
-        [property: JsonPropertyName("token_type")]   string? TokenType,
+        [property: JsonPropertyName("token_type")] string? TokenType,
         string? Scope,
         string? Error,
         [property: JsonPropertyName("error_description")] string? ErrorDescription);

@@ -16,12 +16,4 @@ public static class Tokens
         var bytes = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
         return Convert.ToHexStringLower(bytes);
     }
-
-    public static string? Extract(HttpContext ctx)
-    {
-        var header = ctx.Request.Headers.Authorization.ToString();
-        return header.StartsWith("Bearer ", StringComparison.Ordinal)
-            ? header["Bearer ".Length..]
-            : null;
-    }
 }

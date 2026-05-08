@@ -13,19 +13,35 @@ pub fn run(
 ) -> Result<()> {
     let avatar_ascii = avatar.as_deref().map(ascii::render_default).transpose()?;
     let metadata: BTreeMap<String, String> = meta.into_iter().collect();
-    let metadata_ref = if metadata.is_empty() { None } else { Some(&metadata) };
-
-    let token = if github {
-        register_github(api, handle, text.as_deref(), avatar_ascii.as_deref(), metadata_ref)?
+    let metadata_ref = if metadata.is_empty() {
+        None
     } else {
-        register_password(api, handle, text.as_deref(), avatar_ascii.as_deref(), metadata_ref)?
+        Some(&metadata)
+    };
+
+    let resp = if github {
+        register_github(
+            api,
+            handle,
+            text.as_deref(),
+            avatar_ascii.as_deref(),
+            metadata_ref,
+        )?
+    } else {
+        register_password(
+            api,
+            handle,
+            text.as_deref(),
+            avatar_ascii.as_deref(),
+            metadata_ref,
+        )?
     };
 
     config::save(&config::Session {
-        handle: handle.to_string(),
-        token,
+        handle: resp.handle.clone(),
+        token: resp.token,
     })?;
-    println!("registered {handle}");
+    println!("registered {}", resp.handle);
     Ok(())
 }
 
@@ -35,21 +51,20 @@ fn register_password(
     text: Option<&str>,
     avatar_ascii: Option<&str>,
     metadata: Option<&BTreeMap<String, String>>,
-) -> Result<String> {
+) -> Result<api::TokenResponse> {
     let password = rpassword::prompt_password("password: ")?;
     let confirm = rpassword::prompt_password("confirm:  ")?;
     if password != confirm {
         bail!("passwords did not match");
     }
 
-    let resp = api.register(&api::RegisterRequest {
+    api.register(&api::RegisterRequest {
         handle,
         password: Some(&password),
         text,
         avatar_ascii,
         metadata,
-    })?;
-    Ok(resp.token)
+    })
 }
 
 fn register_github(
@@ -58,8 +73,8 @@ fn register_github(
     text: Option<&str>,
     avatar_ascii: Option<&str>,
     metadata: Option<&BTreeMap<String, String>>,
-) -> Result<String> {
-    let start = api.github_start(handle)?;
+) -> Result<api::TokenResponse> {
+    let start = api.github_start(Some(handle))?;
 
     println!();
     println!("  open:  {}", start.verification_uri);
@@ -74,13 +89,13 @@ fn register_github(
 
         let req = api::GithubCompleteRequest {
             device_code: &start.device_code,
-            handle,
+            handle: Some(handle),
             text,
             avatar_ascii,
             metadata,
         };
         match api.github_complete(&req)? {
-            api::GithubPoll::Done(t) => return Ok(t.token),
+            api::GithubPoll::Done(t) => return Ok(t),
             api::GithubPoll::Pending { slow_down } => {
                 if slow_down {
                     interval = interval.saturating_add(5);

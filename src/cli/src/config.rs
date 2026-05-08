@@ -10,14 +10,19 @@ pub struct Session {
 }
 
 fn config_path() -> Result<PathBuf> {
-    let dir = dirs::config_dir().context("no config directory")?.join("whodat");
+    let dir = dirs::config_dir()
+        .context("no config directory")?
+        .join("whodat");
     Ok(dir.join("session.json"))
 }
 
 pub fn load() -> Result<Session> {
     let path = config_path()?;
     let bytes = fs::read(&path).with_context(|| {
-        format!("no session at {} — run `whodat register` first", path.display())
+        format!(
+            "no session at {} — run `whodat register` first",
+            path.display()
+        )
     })?;
     Ok(serde_json::from_slice(&bytes)?)
 }

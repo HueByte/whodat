@@ -225,7 +225,7 @@ jobs:
           Set-Location packaging/choco
           choco pack whodat.nuspec --output-directory $env:TEMP
           $pkg = Get-ChildItem "$env:TEMP\whodat.*.nupkg" | Select-Object -First 1
-          choco push $pkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
+          choco push $pkg.FullName --source https://push.chocolatey.org/ --api-key $env:choco_api_key
 
   homebrew:
     name: Update Homebrew formula in repo

@@ -8,13 +8,16 @@
   },
   "Infisical": {
     "Enabled": false,
-    "SiteUrl": "https://app.infisical.com",
+    "SiteUrl": "https://secrets.voidcube.cloud",
     "ProjectId": "",
-    "EnvironmentSlug": "dev",
+    "EnvironmentSlug": "prod",
     "SecretPath": "/",
     "Recursive": true,
     "ClientId": "",
-    "ClientSecret": ""
+    "ClientSecret": "",
+    "Mappings": {
+      "gh_oauth_client_id": "GitHub:ClientId"
+    }
   },
   "Serilog": {
     "MinimumLevel": {

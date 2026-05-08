@@ -1,5 +1,5 @@
 class Whodat < Formula
-  desc "finger for the modern internet — public identity registry from your terminal"
+  desc "global, public registry of identities — claim a handle, get looked up from any terminal"
   homepage "https://github.com/HueByte/whodat"
   version "0.1.0"
   license "MIT"

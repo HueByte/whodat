@@ -2,7 +2,7 @@
 name = "whodat"
 version = "0.1.0"
 edition = "2021"
-description = "finger for the modern internet"
+description = "a global, public registry of identities — claim a handle, get looked up from any terminal"
 license = "MIT"
 repository = "https://github.com/HueByte/whodat"
 readme = "../../README.md"

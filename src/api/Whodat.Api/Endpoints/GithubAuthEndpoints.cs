@@ -96,10 +96,10 @@ public static class GithubAuthEndpoints
             return tokenBody.Error switch
             {
                 "authorization_pending" => Results.Json(new { status = "pending" }, statusCode: 202),
-                "slow_down"             => Results.Json(new { status = "pending", slow_down = true }, statusCode: 202),
-                "expired_token"         => Results.Json(new { error = "expired" }, statusCode: 401),
-                "access_denied"         => Results.Json(new { error = "denied" }, statusCode: 401),
-                _                        => Results.Json(new { error = tokenBody.Error }, statusCode: 400),
+                "slow_down" => Results.Json(new { status = "pending", slow_down = true }, statusCode: 202),
+                "expired_token" => Results.Json(new { error = "expired" }, statusCode: 401),
+                "access_denied" => Results.Json(new { error = "denied" }, statusCode: 401),
+                _ => Results.Json(new { error = tokenBody.Error }, statusCode: 400),
             };
         }
 
@@ -148,30 +148,30 @@ public static class GithubAuthEndpoints
     public record StartRequest(string Handle);
 
     public record StartResponse(
-        [property: JsonPropertyName("device_code")]      string DeviceCode,
-        [property: JsonPropertyName("user_code")]        string UserCode,
+        [property: JsonPropertyName("device_code")] string DeviceCode,
+        [property: JsonPropertyName("user_code")] string UserCode,
         [property: JsonPropertyName("verification_uri")] string VerificationUri,
-        [property: JsonPropertyName("expires_in")]       int ExpiresIn,
+        [property: JsonPropertyName("expires_in")] int ExpiresIn,
         int Interval);
 
     public record CompleteRequest(
-        [property: JsonPropertyName("device_code")]    string DeviceCode,
+        [property: JsonPropertyName("device_code")] string DeviceCode,
         string Handle,
         string? Text,
         [property: JsonPropertyName("avatar_ascii")] string? AvatarAscii,
         Dictionary<string, string>? Metadata);
 
     private record GithubDeviceResponse(
-        [property: JsonPropertyName("device_code")]      string? DeviceCode,
-        [property: JsonPropertyName("user_code")]        string? UserCode,
+        [property: JsonPropertyName("device_code")] string? DeviceCode,
+        [property: JsonPropertyName("user_code")] string? UserCode,
         [property: JsonPropertyName("verification_uri")] string? VerificationUri,
-        [property: JsonPropertyName("expires_in")]       int ExpiresIn,
+        [property: JsonPropertyName("expires_in")] int ExpiresIn,
         int Interval,
         string? Error);
 
     private record GithubTokenResponse(
         [property: JsonPropertyName("access_token")] string? AccessToken,
-        [property: JsonPropertyName("token_type")]   string? TokenType,
+        [property: JsonPropertyName("token_type")] string? TokenType,
         string? Scope,
         string? Error,
         [property: JsonPropertyName("error_description")] string? ErrorDescription);

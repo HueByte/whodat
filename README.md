@@ -1,7 +1,7 @@
 # whodat
 
 <p align="center">
-  <em><code>finger</code> for the modern internet — a global, public identity registry you query from your terminal.</em>
+  <em>a global, public registry of identities — queryable from your terminal.</em>
 </p>
 
 <p align="center">

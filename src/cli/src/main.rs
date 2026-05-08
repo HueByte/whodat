@@ -7,7 +7,7 @@ mod render;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "whodat", version, about = "finger for the modern internet")]
+#[command(name = "whodat", version, about = "a global, public registry of identities")]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,

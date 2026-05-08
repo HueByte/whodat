@@ -19,3 +19,7 @@ trim_trailing_whitespace = false
 # Makefiles require literal tabs.
 [Makefile]
 indent_style = tab
+
+# EF Core scaffolds migrations with a UTF-8 BOM; treat that as expected.
+[**/Migrations/*.cs]
+charset = utf-8-bom

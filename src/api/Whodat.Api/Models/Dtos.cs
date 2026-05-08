@@ -8,6 +8,9 @@ public record EntryDto(
     string? Text,
     [property: JsonPropertyName("avatar_ascii")] string? AvatarAscii,
     Dictionary<string, string> Metadata,
+    List<string> Aliases,
+    [property: JsonPropertyName("is_hidden")] bool IsHidden,
+    [property: JsonPropertyName("random_visible")] bool RandomVisible,
     [property: JsonPropertyName("registered_at")] long RegisteredAt,
     [property: JsonPropertyName("updated_at")] long UpdatedAt)
 {
@@ -18,6 +21,9 @@ public record EntryDto(
         string.IsNullOrEmpty(u.MetadataJson)
             ? new Dictionary<string, string>()
             : JsonSerializer.Deserialize<Dictionary<string, string>>(u.MetadataJson) ?? new(),
+        u.Aliases.Select(a => a.Alias).OrderBy(a => a).ToList(),
+        u.IsHidden,
+        u.RandomVisible,
         u.RegisteredAt,
         u.UpdatedAt);
 }
@@ -37,4 +43,9 @@ public record TokenResponse(string Token, string Handle);
 public record UpdateRequest(
     string? Text,
     [property: JsonPropertyName("avatar_ascii")] string? AvatarAscii,
-    Dictionary<string, string>? Metadata);
+    Dictionary<string, string>? Metadata,
+    [property: JsonPropertyName("is_hidden")] bool? IsHidden,
+    [property: JsonPropertyName("random_visible")] bool? RandomVisible,
+    /// Replace-all list of aliases. Null means "leave unchanged"; an empty
+    /// list clears all aliases.
+    List<string>? Aliases);

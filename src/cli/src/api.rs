@@ -16,8 +16,18 @@ pub struct Entry {
     pub avatar_ascii: Option<String>,
     #[serde(default)]
     pub metadata: BTreeMap<String, String>,
+    #[serde(default)]
+    pub aliases: Vec<String>,
+    #[serde(default)]
+    pub is_hidden: bool,
+    #[serde(default = "default_true")]
+    pub random_visible: bool,
     pub registered_at: i64,
     pub updated_at: i64,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Serialize)]
@@ -43,6 +53,13 @@ pub struct UpdateRequest<'a> {
     pub avatar_ascii: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<&'a BTreeMap<String, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_hidden: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub random_visible: Option<bool>,
+    /// Replace-all list of aliases. None = leave alone, empty = clear all.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aliases: Option<&'a [String]>,
 }
 
 impl Client {

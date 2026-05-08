@@ -5,7 +5,8 @@ mod config;
 mod profile;
 mod render;
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
+pub use clap::Subcommand;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -79,12 +80,40 @@ enum Command {
     /// Show your own entry.
     Me,
 
+    /// Hide your profile from public lookups (you can still see it via `me`).
+    Hide,
+
+    /// Reverse `hide` — make your profile publicly visible again.
+    Unhide,
+
+    /// Allow your profile to appear in `whodat random` discovery (default).
+    Discoverable,
+
+    /// Opt out of `whodat random` discovery while keeping direct lookups working.
+    Undiscoverable,
+
+    /// Manage handle aliases (max 5).
+    Alias {
+        #[command(subcommand)]
+        action: AliasAction,
+    },
+
     /// Delete your registration.
     Delete {
         /// Skip the confirmation prompt.
         #[arg(long)]
         yes: bool,
     },
+}
+
+#[derive(Subcommand)]
+pub enum AliasAction {
+    /// Add an alias (max 5 total).
+    Add { name: String },
+    /// Remove an alias.
+    Rm { name: String },
+    /// Remove all aliases.
+    Clear,
 }
 
 fn parse_kv(s: &str) -> Result<(String, String), String> {
@@ -124,6 +153,11 @@ fn main() -> anyhow::Result<()> {
             _,
         ) => commands::set::run(&api, profile, text, avatar, meta),
         (Some(Command::Me), _) => commands::me::run(&api),
+        (Some(Command::Hide), _) => commands::visibility::hide(&api),
+        (Some(Command::Unhide), _) => commands::visibility::unhide(&api),
+        (Some(Command::Discoverable), _) => commands::visibility::discoverable(&api, true),
+        (Some(Command::Undiscoverable), _) => commands::visibility::discoverable(&api, false),
+        (Some(Command::Alias { action }), _) => commands::alias::run(&api, action),
         (Some(Command::Delete { yes }), _) => commands::delete::run(&api, yes),
         (None, None) => {
             <Cli as clap::CommandFactory>::command().print_help()?;

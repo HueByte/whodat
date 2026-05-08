@@ -29,6 +29,7 @@ pub fn run(
             } else {
                 Some(&metadata)
             },
+            ..Default::default()
         },
     )?;
 

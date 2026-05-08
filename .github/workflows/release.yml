@@ -198,11 +198,22 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release download "${{ needs.detect.outputs.tag }}" --pattern "whodat-x86_64-pc-windows-msvc.zip"
 
+      - name: Pull CI secrets from Infisical
+        if: steps.choco_check.outputs.exists == 'false'
+        uses: infisical/secrets-action@v1.0.7
+        with:
+          method: universal
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          domain: https://secrets.voidcube.cloud
+          project-slug: whodat
+          env-slug: prod
+          secret-path: /ci
+          export-type: env
+
       - name: Pack and push
         if: steps.choco_check.outputs.exists == 'false'
         shell: pwsh
-        env:
-          CHOCO_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
         run: |
           $version = "${{ needs.detect.outputs.version }}"
           $checksum = (Get-FileHash whodat-x86_64-pc-windows-msvc.zip -Algorithm SHA256).Hash.ToLower()
@@ -214,7 +225,7 @@ jobs:
           Set-Location packaging/choco
           choco pack whodat.nuspec --output-directory $env:TEMP
           $pkg = Get-ChildItem "$env:TEMP\whodat.*.nupkg" | Select-Object -First 1
-          choco push $pkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
+          choco push $pkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
 
   homebrew:
     name: Update Homebrew formula in repo

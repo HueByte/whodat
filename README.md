@@ -121,7 +121,7 @@ Shared flags for `register` / `set`:
 | `--meta key=value` | Repeatable metadata pair, e.g. `--meta github=HueByte` |
 | `--github` | (register only) Use GitHub device flow instead of password |
 
-By default the CLI talks to `https://whodat.dev`. Override with `--api <url>` or `WHODAT_API=<url>`.
+By default the CLI talks to `https://whoisdat.dev`. Override with `--api <url>` or `WHODAT_API=<url>`.
 
 ### Examples
 

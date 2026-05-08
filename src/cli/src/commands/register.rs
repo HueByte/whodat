@@ -1,18 +1,26 @@
-use crate::{api, ascii, config};
+use crate::{api, ascii, config, profile};
 use anyhow::{bail, Result};
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 use std::time::Duration;
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     api: &api::Client,
     handle: &str,
     github: bool,
+    profile_path: Option<PathBuf>,
     text: Option<String>,
     avatar: Option<String>,
     meta: Vec<(String, String)>,
 ) -> Result<()> {
+    let loaded = match profile_path {
+        Some(p) => profile::Profile::load(&p)?,
+        None => profile::Profile::default(),
+    };
+    let (text, avatar, metadata) = profile::merge(loaded, text, avatar, meta);
+
     let avatar_ascii = avatar.as_deref().map(ascii::render_default).transpose()?;
-    let metadata: BTreeMap<String, String> = meta.into_iter().collect();
     let metadata_ref = if metadata.is_empty() {
         None
     } else {

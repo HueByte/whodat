@@ -1,16 +1,23 @@
-use crate::{api, ascii, config, render};
+use crate::{api, ascii, config, profile, render};
 use anyhow::Result;
-use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 pub fn run(
     api: &api::Client,
+    profile_path: Option<PathBuf>,
     text: Option<String>,
     avatar: Option<String>,
     meta: Vec<(String, String)>,
 ) -> Result<()> {
     let session = config::load()?;
+
+    let loaded = match profile_path {
+        Some(p) => profile::Profile::load(&p)?,
+        None => profile::Profile::default(),
+    };
+    let (text, avatar, metadata) = profile::merge(loaded, text, avatar, meta);
+
     let avatar_ascii = avatar.as_deref().map(ascii::render_default).transpose()?;
-    let metadata: BTreeMap<String, String> = meta.into_iter().collect();
 
     let entry = api.update(
         &session.token,

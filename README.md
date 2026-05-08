@@ -123,6 +123,26 @@ Shared flags for `register` / `set`:
 
 By default the CLI talks to `https://whoisdat.dev`. Override with `--api <url>` or `WHODAT_API=<url>`.
 
+### Profile file (`--profile profile.json`)
+
+Both `register` and `set` accept a `--profile <path>` flag that loads `text`, `avatar`, and `metadata` from a single JSON file. Per-flag CLI args (`--text`, `--avatar`, `--meta`) still win over the file. Useful for keeping your profile in dotfiles or sharing across machines.
+
+```json
+{
+  "text": "building things, mass graveyard of side projects",
+  "avatar": "./me.jpg",
+  "metadata": {
+    "github": "HueByte",
+    "site": "huebyte.dev"
+  }
+}
+```
+
+```bash
+whodat register sleepless --github --profile ~/dotfiles/whodat.json
+whodat set --profile ~/dotfiles/whodat.json --text "blurb override just this run"
+```
+
 ### Examples
 
 ```bash

@@ -2,9 +2,11 @@ mod api;
 mod ascii;
 mod commands;
 mod config;
+mod profile;
 mod render;
 
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(
@@ -37,6 +39,10 @@ enum Command {
         #[arg(long)]
         github: bool,
 
+        /// Load text/avatar/metadata from a JSON file. Per-flag values override file values.
+        #[arg(long)]
+        profile: Option<PathBuf>,
+
         /// Free-text blurb (max 280 chars).
         #[arg(long)]
         text: Option<String>,
@@ -59,6 +65,9 @@ enum Command {
 
     /// Update your existing entry.
     Set {
+        /// Load text/avatar/metadata from a JSON file. Per-flag values override file values.
+        #[arg(long)]
+        profile: Option<PathBuf>,
         #[arg(long)]
         text: Option<String>,
         #[arg(long)]
@@ -97,16 +106,23 @@ fn main() -> anyhow::Result<()> {
             Some(Command::Register {
                 handle,
                 github,
+                profile,
                 text,
                 avatar,
                 meta,
             }),
             _,
-        ) => commands::register::run(&api, &handle, github, text, avatar, meta),
+        ) => commands::register::run(&api, &handle, github, profile, text, avatar, meta),
         (Some(Command::Login { github }), _) => commands::login::run(&api, github),
-        (Some(Command::Set { text, avatar, meta }), _) => {
-            commands::set::run(&api, text, avatar, meta)
-        }
+        (
+            Some(Command::Set {
+                profile,
+                text,
+                avatar,
+                meta,
+            }),
+            _,
+        ) => commands::set::run(&api, profile, text, avatar, meta),
         (Some(Command::Me), _) => commands::me::run(&api),
         (Some(Command::Delete { yes }), _) => commands::delete::run(&api, yes),
         (None, None) => {

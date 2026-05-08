@@ -65,10 +65,13 @@ app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Apply any pending EF Core migrations on startup. This is the single
+// source of truth for schema — never use EnsureCreated, which silently
+// no-ops when the file already exists with an outdated schema.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<WhodatDb>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
 }
 
 if (app.Environment.IsDevelopment())

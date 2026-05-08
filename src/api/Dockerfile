@@ -6,6 +6,9 @@ WORKDIR /src
 COPY Whodat.Api/Whodat.Api.csproj Whodat.Api/
 RUN dotnet restore Whodat.Api/Whodat.Api.csproj
 COPY Whodat.Api/ Whodat.Api/
+# `appsettings.json` is gitignored so contributors don't leak local tweaks.
+# Fall back to the committed example when building from a clean clone.
+RUN test -f Whodat.Api/appsettings.json || cp Whodat.Api/appsettings.json.example Whodat.Api/appsettings.json
 RUN dotnet publish Whodat.Api/Whodat.Api.csproj -c Release -o /app /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} AS runtime

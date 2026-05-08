@@ -12,6 +12,13 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       Whodat__DbPath: /data/whodat.db
       GitHub__ClientId: ${GITHUB_CLIENT_ID:-}
+      Infisical__Enabled: ${INFISICAL_ENABLED:-false}
+      Infisical__SiteUrl: ${INFISICAL_SITE_URL:-https://app.infisical.com}
+      Infisical__ProjectId: ${INFISICAL_PROJECT_ID:-}
+      Infisical__EnvironmentSlug: ${INFISICAL_ENVIRONMENT:-prod}
+      Infisical__SecretPath: ${INFISICAL_SECRET_PATH:-/}
+      Infisical__ClientId: ${INFISICAL_CLIENT_ID:-}
+      Infisical__ClientSecret: ${INFISICAL_CLIENT_SECRET:-}
     volumes:
       - whodat-data:/data
       - whodat-logs:/app/logs

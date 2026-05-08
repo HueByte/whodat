@@ -22,7 +22,7 @@ A namespace. You claim a handle, optionally drop a blurb, an avatar, and some me
 
 No feeds. No follows. No engagement metrics. No "Stories". Just `name → blurb` lookups, like a phonebook for the internet.
 
-```
+```text
 $ whodat sleepless
 
   ▀▀▄▄▀▀▀▀▄▄
@@ -104,7 +104,7 @@ cargo install --path src/cli
 
 ## CLI usage
 
-```
+```text
 whodat <handle>                       # Look up a handle
 whodat register <handle> [flags]      # Claim a handle
 whodat set [flags]                    # Update your entry
@@ -165,9 +165,26 @@ Pre-built images: [`ghcr.io/huebyte/whodat-api`](https://github.com/HueByte/whod
 | `Whodat__DbPath` | `/data/whodat.db` | Inside the API container; mounted on `whodat-data` volume |
 | `ASPNETCORE_ENVIRONMENT` | `Production` | Set to `Development` to expose `/openapi/*` |
 
+### Secrets via Infisical (optional)
+
+The API can pull its config from an [Infisical](https://infisical.com) project at startup instead of (or alongside) the env-var path. Set `INFISICAL_ENABLED=true` in `.env` plus the four required fields:
+
+| Variable | What it is |
+|---|---|
+| `INFISICAL_PROJECT_ID` | Project ID from the Infisical UI |
+| `INFISICAL_ENVIRONMENT` | Environment slug — `dev` / `staging` / `prod` |
+| `INFISICAL_CLIENT_ID` | Machine identity Client ID (Universal Auth) |
+| `INFISICAL_CLIENT_SECRET` | Machine identity Client Secret |
+
+**Naming convention:** secret keys in Infisical use `__` for nesting, the same way ASP.NET Core treats env vars. So a secret named `GitHub__ClientId` in Infisical populates `Configuration["GitHub:ClientId"]` automatically — no code changes needed.
+
+**Priority:** Infisical is added last in the configuration chain, so its values override `appsettings.json` and environment variables. Use command-line args for emergency overrides.
+
+If `INFISICAL_ENABLED=false` (the default), the provider does nothing and existing env-var-based config keeps working.
+
 ### GitHub OAuth setup (optional)
 
-1. https://github.com/settings/developers → New OAuth App
+1. <https://github.com/settings/developers> → New OAuth App
 2. Toggle **Enable Device Flow** (this is the actual switch — without it, `/start` returns 502)
 3. Copy the **Client ID** into `.env` as `GITHUB_CLIENT_ID`
 4. The `Authorization callback URL` field is required by GitHub's form but device flow never uses it — put any valid URL
@@ -199,7 +216,7 @@ Planned levers:
 
 ## Repo layout
 
-```
+```text
 whodat/
   src/
     cli/          # Rust CLI (clap, reqwest, image)
@@ -216,6 +233,14 @@ whodat/
 ```
 
 ## Building from source
+
+The API's `appsettings.json` is **gitignored** so contributors can't leak local tweaks. Copy the committed example before running locally:
+
+```bash
+cp src/api/Whodat.Api/appsettings.json.example src/api/Whodat.Api/appsettings.json
+```
+
+The Dockerfile already does this fallback automatically — `docker compose up` works on a clean clone with no extra steps.
 
 ```bash
 # Rust client

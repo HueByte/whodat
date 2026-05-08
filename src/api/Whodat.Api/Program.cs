@@ -4,8 +4,14 @@ using Serilog;
 using Whodat.Api.Auth;
 using Whodat.Api.Data;
 using Whodat.Api.Endpoints;
+using Whodat.Api.Infisical;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Pull secrets from Infisical (no-op when Infisical:Enabled=false) before any
+// other configuration is read. Added last in the chain, so values override
+// appsettings.json and env vars; use command-line args for emergency overrides.
+builder.Configuration.AddInfisical(builder.Configuration);
 
 builder.Host.UseSerilog((ctx, services, cfg) =>
     cfg.ReadFrom.Configuration(ctx.Configuration).ReadFrom.Services(services));

@@ -441,3 +441,8 @@ Cargo.lock
 *.db-shm
 *.db-wal
 .env
+
+# ASP.NET Core appsettings — copy appsettings.json.example to appsettings.json
+# before running locally. The example is the canonical template.
+appsettings.json
+appsettings.Local.json

@@ -1,0 +1,45 @@
+{
+  "AllowedHosts": "*",
+  "Whodat": {
+    "DbPath": "whodat.db"
+  },
+  "GitHub": {
+    "ClientId": ""
+  },
+  "Infisical": {
+    "Enabled": false,
+    "SiteUrl": "https://app.infisical.com",
+    "ProjectId": "",
+    "EnvironmentSlug": "dev",
+    "SecretPath": "/",
+    "Recursive": true,
+    "ClientId": "",
+    "ClientSecret": ""
+  },
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft.AspNetCore": "Warning",
+        "Microsoft.EntityFrameworkCore": "Warning",
+        "Microsoft.Hosting.Lifetime": "Information"
+      }
+    },
+    "WriteTo": [
+      { "Name": "Console" },
+      {
+        "Name": "File",
+        "Args": {
+          "path": "logs/whodat-.log",
+          "rollingInterval": "Day",
+          "retainedFileCountLimit": 14,
+          "outputTemplate": "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+        }
+      }
+    ],
+    "Enrich": [ "FromLogContext" ],
+    "Properties": {
+      "Application": "Whodat.Api"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 [package]
 name = "whodat"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "a global, public registry of identities — claim a handle, get looked up from any terminal"
 license = "MIT"
@@ -34,3 +34,10 @@ dirs = "5"
 url = "2"
 webbrowser = "1"
 textwrap = "0.16"
+self_update = { version = "0.42", default-features = false, features = [
+    "archive-tar",
+    "archive-zip",
+    "compression-flate2",
+    "compression-zip-deflate",
+    "rustls",
+] }

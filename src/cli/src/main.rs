@@ -104,6 +104,13 @@ enum Command {
         #[arg(long)]
         yes: bool,
     },
+
+    /// Update the `whodat` binary to the latest GitHub Release.
+    Update {
+        /// Just compare versions, don't download or replace anything.
+        #[arg(long)]
+        check: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -159,6 +166,7 @@ fn main() -> anyhow::Result<()> {
         (Some(Command::Undiscoverable), _) => commands::visibility::discoverable(&api, false),
         (Some(Command::Alias { action }), _) => commands::alias::run(&api, action),
         (Some(Command::Delete { yes }), _) => commands::delete::run(&api, yes),
+        (Some(Command::Update { check }), _) => commands::update::run(check),
         (None, None) => {
             <Cli as clap::CommandFactory>::command().print_help()?;
             Ok(())

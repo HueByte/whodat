@@ -109,6 +109,7 @@ Package-manager users:
 ```powershell
 choco upgrade whodat       # Windows
 ```
+
 ```bash
 brew upgrade --formula https://raw.githubusercontent.com/HueByte/whodat/master/packaging/homebrew/whodat.rb   # macOS / Linux
 ```

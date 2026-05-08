@@ -90,10 +90,10 @@ whodat update             # download + replace in place
 
 ```bash
 # 1. Claim a handle (with GitHub OAuth - opens the browser, paste the code)
-whodat register sleepless --github
+whodat register Hue --github
 
 # 2. Look anyone up
-whodat sleepless
+whodat Hue
 
 # 3. Update your blurb later
 whodat set --text "currently shipping"
@@ -105,14 +105,14 @@ whodat me
 Or with a password instead of GitHub:
 
 ```bash
-whodat register sleepless --text "..." --avatar ./me.jpg
+whodat register Hue --text "..." --avatar ./me.jpg
 # prompts: password / confirm
 ```
 
-Result of `whodat sleepless` (after the above):
+Result of `whodat Hue` (after the above):
 
 <p align="center">
-  <img src="assets/s1.png" alt="whodat sleepless rendered in the terminal" />
+  <img src="assets/s1.png" alt="whodat Hue rendered in the terminal" />
 </p>
 
 ## Commands
@@ -163,7 +163,7 @@ Both `register` and `set` accept `--profile <path>`. Keep your profile in dotfil
 ```
 
 ```bash
-whodat register sleepless --github --profile ~/dotfiles/whodat.json
+whodat register Hue --github --profile ~/dotfiles/whodat.json
 whodat set --profile ~/dotfiles/whodat.json --text "blurb override just this run"
 ```
 
